@@ -42,8 +42,9 @@ public class Event<T>{
     /**
      * Executes this event, aka all the {@link #actions} for this event.
      * @param t optional object to pass over to the action, so that it has more information about the occured event.
+     * @return this event for chaining.
      */
-    public void execute(T t){
+    public Event<T> execute(T t){
         synchronized (actions){
             synchronized (actionsToRemove){
                 for (Action<T> action:
@@ -61,6 +62,7 @@ public class Event<T>{
                 }
             }
         }
+        return this;
     }
 
     /**
@@ -99,13 +101,18 @@ public class Event<T>{
         }
     }
 
-    public void removeAction(Action<T> action){
+    /**
+     * Removes the provided action from the {@link #actions} and {@link #actionsToRemove} lists.
+     * @return this event for chaining.
+     */
+    public Event<T> removeAction(Action<T> action){
         synchronized (actions){
             synchronized (actionsToRemove){
                 actions.remove(action);
                 actionsToRemove.remove(action);
             }
         }
+        return this;
     }
 
     /**
@@ -135,9 +142,10 @@ public class Event<T>{
      * @param msBetweenChecks the amount of milliseconds between each check.
      * @param condition when true, removes that action from the list.
      * @param onException gets executed when something went wrong during condition checking.
+     * @return this event for chaining.
      */
-    public void initCleaner(int msBetweenChecks, Predicate<Object> condition, Consumer<Exception> onException){
-        if (cleanerThread != null) return;
+    public Event<T> initCleaner(int msBetweenChecks, Predicate<Object> condition, Consumer<Exception> onException){
+        if (cleanerThread != null) return this;
         cleanerRunnable = () -> {
             try{
                 while (true){
@@ -164,5 +172,6 @@ public class Event<T>{
         };
         cleanerThread = new Thread(cleanerRunnable);
         cleanerThread.start();
+        return this;
     }
 }
