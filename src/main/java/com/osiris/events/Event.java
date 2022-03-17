@@ -19,8 +19,10 @@ public class Event<T>{
      * Also known under event listeners. <br>
      * Be aware of concurrency issues, use methods of this class instead to avoid them! <br>
      */
-    public final List<Action<T>> actions;
-    public final List<Action<T>> actionsToRemove = new ArrayList<>();
+    private final List<Action<T>> actions;
+    private final List<Action<T>> actionsToRemove = new ArrayList<>();
+    public Thread cleanerThread;
+    public Runnable cleanerRunnable;
 
     /**
      * Creates a new event with an empty {@link #actions} list.
@@ -89,27 +91,59 @@ public class Event<T>{
         synchronized (actions){
             Action<T> action = new Action<>(onEvent, onException, isOneTime, object);
             actions.add(action);
+            if(cleanerThread != null && !cleanerThread.isAlive()){
+                cleanerThread = new Thread(cleanerRunnable);
+                cleanerThread.start();
+            }
             return action;
         }
     }
 
-    private Thread cleanerThread;
+    public void removeAction(Action<T> action){
+        synchronized (actions){
+            synchronized (actionsToRemove){
+                actions.remove(action);
+                actionsToRemove.remove(action);
+            }
+        }
+    }
+
+    /**
+     * Returns a copy of {@link #actions}.
+     */
+    public List<Action<T>> getActions(){
+        synchronized (actions){
+            return new ArrayList<>(actions);
+        }
+    }
+
+    /**
+     * Returns a copy of {@link #actionsToRemove}.
+     */
+    public List<Action<T>> getActionsToRemove(){
+        synchronized (actionsToRemove){
+            return new ArrayList<>(actionsToRemove);
+        }
+    }
 
     /**
      * Initialises a thread that removes actions from the {@link #actions} list if the provided condition is true. <br>
      * Does nothing if already initialised. <br>
      * The initialised thread throws {@link RuntimeException} if something went wrong. <br>
+     * Note that when {@link #actions} is empty the cleaner thread stops. <br>
+     * A new cleaner thread gets created once a new action is added. <br>
      * @param msBetweenChecks the amount of milliseconds between each check.
      * @param condition when true, removes that action from the list.
      * @param onException gets executed when something went wrong during condition checking.
      */
     public void initCleaner(int msBetweenChecks, Predicate<Object> condition, Consumer<Exception> onException){
         if (cleanerThread != null) return;
-        cleanerThread = new Thread(() -> {
+        cleanerRunnable = () -> {
             try{
                 while (true){
                     Thread.sleep(msBetweenChecks);
                     synchronized (actions){
+                        if(actions.isEmpty()) break; // Stops the thread, thread gets restarted when a new action is added
                         synchronized (actionsToRemove){
                             for (Action<T> action :
                                     actions) {
@@ -127,7 +161,8 @@ public class Event<T>{
             } catch (Exception e) {
                 throw new RuntimeException();
             }
-        });
+        };
+        cleanerThread = new Thread(cleanerRunnable);
         cleanerThread.start();
     }
 }

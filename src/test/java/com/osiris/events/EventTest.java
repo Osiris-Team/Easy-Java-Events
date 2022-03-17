@@ -8,7 +8,7 @@ class EventTest {
     @Test
     void example() throws InterruptedException {
         Event<Integer> onValueChanged = new Event<>();
-        onValueChanged.addAction(value -> { // Stays in memory and gets executed every time.
+        Action<Integer> action = onValueChanged.addAction(value -> { // Stays in memory and gets executed every time.
             System.out.println("New value: "+value);
             // You can throw exceptions in here
         }, Exception::printStackTrace); // and catch them here.
@@ -31,17 +31,23 @@ class EventTest {
         }, Exception::printStackTrace, false, null);
 
         // Then we initialise the cleaner thread for this event, which checks
-        // its actions list every second for actions that
+        // its actions list every 100ms for actions that
         // fulfill the condition "object != null" and removes those.
-        onValueChanged.initCleaner(1000, object -> object != null, Exception::printStackTrace);
+        onValueChanged.initCleaner(100, object -> object != null, Exception::printStackTrace);
 
         // Once we want to remove the action, we simply give it an object that is not null.
         // The cleaner then removes it in the next check.
         actionToRemove.object = new Object(); // Note that you can store any type of object here.
 
 
-
-        Thread.sleep(3000);
-        assertEquals(1, onValueChanged.actions.size());
+        // Actual tests:
+        Thread.sleep(200);
+        assertEquals(1, onValueChanged.getActions().size());
+        onValueChanged.removeAction(action);
+        Thread.sleep(200);
+        onValueChanged.addAction(value -> {
+            System.out.println("New value: "+value);
+        }, Exception::printStackTrace);
+        assertTrue(onValueChanged.cleanerThread.isAlive());
     }
 }
