@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class CastingTest {
+class CastingTest {
     @Test
     void test() throws InterruptedException {
         Event<Integer> onValueChanged = new Event<>();
@@ -13,7 +13,7 @@ public class CastingTest {
         }, Exception::printStackTrace, false, null);
         onValueChanged.initCleaner(100, object -> (Boolean) object, Exception::printStackTrace);
         actionToRemove.object = Boolean.TRUE;
-        Thread.sleep(300);
+        onValueChanged.execute(1);
         assertEquals(0, onValueChanged.getActions().size());
     }
 }

@@ -23,6 +23,8 @@ public class Event<T>{
     private final List<Action<T>> actionsToRemove = new ArrayList<>();
     public Thread cleanerThread;
     public Runnable cleanerRunnable;
+    public Predicate<Object> removeCondition;
+    public Consumer<Exception> onConditionException;
 
     /**
      * Creates a new event with an empty {@link #actions} list.
@@ -40,7 +42,9 @@ public class Event<T>{
     }
 
     /**
-     * Executes this event, aka all the {@link #actions} for this event.
+     * Executes all the {@link #actions} for this event. <br>
+     * If {@link #removeCondition} is not null and valid the action gets not executed and removed from {@link #actions}. <br>
+     * Note that you will get a {@link NullPointerException} when the condition check throws an exception and {@link #onConditionException} is null. <br>
      * @param t optional object to pass over to the action, so that it has more information about the occured event.
      * @return this event for chaining.
      */
@@ -50,8 +54,16 @@ public class Event<T>{
                 for (Action<T> action:
                         actions) {
                     try{
-                        action.onEvent.accept(t);
-                        if(action.isOneTime) actionsToRemove.add(action);
+                        if(removeCondition!=null)
+                            try{
+                                if(removeCondition.test(action.object)) actionsToRemove.add(action);
+                            } catch (Exception e) {
+                                onConditionException.accept(e);
+                            }
+                        else{
+                            action.onEvent.accept(t);
+                            if(action.isOneTime) actionsToRemove.add(action);
+                        }
                     } catch (Exception e) {
                         action.onException.accept(e);
                     }
@@ -140,12 +152,14 @@ public class Event<T>{
      * Note that when {@link #actions} is empty the cleaner thread stops. <br>
      * A new cleaner thread gets created once a new action is added. <br>
      * @param msBetweenChecks the amount of milliseconds between each check.
-     * @param condition when true, removes that action from the list.
-     * @param onException gets executed when something went wrong during condition checking.
+     * @param removeCondition when true, removes that action from the list.
+     * @param onConditionException gets executed when something went wrong during condition checking.
      * @return this event for chaining.
      */
-    public Event<T> initCleaner(int msBetweenChecks, Predicate<Object> condition, Consumer<Exception> onException){
+    public Event<T> initCleaner(int msBetweenChecks, Predicate<Object> removeCondition, Consumer<Exception> onConditionException){
         if (cleanerThread != null) return this;
+        this.removeCondition = removeCondition;
+        this.onConditionException = onConditionException;
         cleanerRunnable = () -> {
             try{
                 while (true){
@@ -156,9 +170,9 @@ public class Event<T>{
                             for (Action<T> action :
                                     actions) {
                                 try{
-                                    if(condition.test(action.object)) actionsToRemove.add(action);
+                                    if(removeCondition.test(action.object)) actionsToRemove.add(action);
                                 } catch (Exception e) {
-                                    onException.accept(e);
+                                    onConditionException.accept(e);
                                 }
                             }
                         }
