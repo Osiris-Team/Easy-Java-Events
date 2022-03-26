@@ -181,7 +181,7 @@ public class Event<T>{
                     }
                 }
             } catch (Exception e) {
-                throw new RuntimeException();
+                throw new RuntimeException(e);
             }
         };
         cleanerThread = new Thread(cleanerRunnable);
