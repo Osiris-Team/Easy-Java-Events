@@ -54,13 +54,18 @@ public class Event<T>{
                 for (Action<T> action:
                         actions) {
                     try{
-                        if(removeCondition!=null)
-                            try{
-                                if(removeCondition.test(action.object)) actionsToRemove.add(action);
-                            } catch (Exception e) {
-                                onConditionException.accept(e);
+                        boolean skip = false;
+                        try{
+                            if(removeCondition!=null && removeCondition.test(action.object)){
+                                actionsToRemove.add(action);
+                                skip = true;
                             }
-                        else{
+                        } catch (Exception e) {
+                            onConditionException.accept(e);
+                            skip = true;
+                        }
+
+                        if(!skip){
                             action.onEvent.accept(t);
                             if(action.isOneTime) actionsToRemove.add(action);
                         }
