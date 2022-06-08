@@ -8,7 +8,7 @@ class CastingTest {
     @Test
     void test() throws InterruptedException {
         Event<Integer> onValueChanged = new Event<>();
-        Action<Integer> actionToRemove = onValueChanged.addAction(value -> {
+        Action<Integer> actionToRemove = onValueChanged.addAction((a, value) -> {
             System.out.println("New value: "+value+", but I will be gone soon :/");
         }, Exception::printStackTrace, false, null);
         onValueChanged.initCleaner(100, object -> (Boolean) object, Exception::printStackTrace);

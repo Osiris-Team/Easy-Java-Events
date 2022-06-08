@@ -22,14 +22,14 @@ import java.util.Objects;
  * @since 1.8
  */
 @FunctionalInterface
-public interface ConsumerWithException<T> {
+public interface ConsumerWithException<A, T> {
 
     /**
      * Performs this operation on the given argument.
      *
      * @param t the input argument
      */
-    void accept(T t) throws Exception;
+    void accept(A a, T t) throws Exception;
 
     /**
      * Returns a composed {@code Consumer} that performs, in sequence, this
@@ -43,11 +43,11 @@ public interface ConsumerWithException<T> {
      * operation followed by the {@code after} operation
      * @throws NullPointerException if {@code after} is null
      */
-    default ConsumerWithException<T> andThen(java.util.function.Consumer<? super T> after) throws Exception {
+    default ConsumerWithException<A,T> andThen(ConsumerWithException<A, T> after) throws Exception {
         Objects.requireNonNull(after);
-        return (T t) -> {
-            accept(t);
-            after.accept(t);
+        return (A a, T t) -> {
+            accept(a, t);
+            after.accept(a, t);
         };
     }
 }

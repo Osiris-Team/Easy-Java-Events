@@ -8,7 +8,6 @@
 
 package com.osiris.events;
 
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -16,7 +15,7 @@ public class Action<T> {
     /**
      * Holds code. Gets executed on an event.
      */
-    public ConsumerWithException<T> onEvent;
+    public ConsumerWithException<Action<T>, T> onEvent;
     /**
      * Holds code. Gets executed when an exception was thrown in the code held by {@link #onEvent}. <br>
      * Can be null. <br>
@@ -50,11 +49,33 @@ public class Action<T> {
      * @param isOneTime See {@link Action#isOneTime}.
      * @param object See {@link Action#object}.
      */
-    public Action(ConsumerWithException<T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
+    public Action(ConsumerWithException<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
         this.onEvent = onEvent;
         this.onException = onException;
         this.isOneTime = isOneTime;
         this.object = object;
-        if(isOneTime) removeCondition = obj -> executionCount >= 1;
+        if(isOneTime) oneTime();
+    }
+
+    /**
+     * Marks this action to be removed. <br>
+     * Note that this will not happen directly. It gets removed
+     * before this action executes the next time, or
+     * when the {@link Event#cleanerThread} checks next time.
+     */
+    public void remove(){
+        removeCondition = obj -> true;
+    }
+
+    /**
+     * Force removes this action from the provided event. <br>
+     * <p style="color:red">Note that this results in a deadlock, when called during action execution!</p>
+     */
+    public void forceRemove(Event<T> event){
+        event.removeAction(this);
+    }
+
+    public void oneTime(){
+        removeCondition = obj -> executionCount >= 1;
     }
 }

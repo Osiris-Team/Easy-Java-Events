@@ -72,7 +72,7 @@ public class Event<T>{
                         }
 
                         if(!skip){
-                            action.onEvent.accept(t);
+                            action.onEvent.accept(action, t);
                             action.executionCount++;
                         }
                     } catch (Exception e) {
@@ -94,7 +94,7 @@ public class Event<T>{
      * @param onEvent See {@link Action#onEvent}.
      * @param onException See {@link Action#onException}.
      */
-    public Action<T> addAction(ConsumerWithException<T> onEvent, Consumer<Exception> onException){
+    public Action<T> addAction(ConsumerWithException<Action<T>, T> onEvent, Consumer<Exception> onException){
         return addAction(onEvent, onException, false, null);
     }
 
@@ -104,17 +104,17 @@ public class Event<T>{
      * @param onEvent See {@link Action#onEvent}.
      * @param onException See {@link Action#onException}.
      */
-    public Action<T> addOneTimeAction(ConsumerWithException<T> onEvent, Consumer<Exception> onException){
+    public Action<T> addOneTimeAction(ConsumerWithException<Action<T>, T> onEvent, Consumer<Exception> onException){
         return addAction(onEvent, onException, true, null);
     }
 
-    public Action<T> addAction(ConsumerWithException<T> onEvent, Consumer<Exception> onException, boolean isOneTime){
+    public Action<T> addAction(ConsumerWithException<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime){
         return addAction(onEvent, onException, isOneTime, null);
     }
 
-    public Action<T> addAction(ConsumerWithException<T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object){
+    public Action<T> addAction(ConsumerWithException<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object){
         synchronized (actions){
-            Action<T> action = new Action<>(onEvent, onException, isOneTime, object);
+            Action<T> action = new Action(onEvent, onException, isOneTime, object);
             actions.add(action);
             if(cleanerThread != null && !cleanerThread.isAlive()){
                 cleanerThread = new Thread(cleanerRunnable);
