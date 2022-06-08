@@ -56,7 +56,13 @@ public class Event<T>{
                     try{
                         boolean skip = false;
                         try{
-                            if(removeCondition!=null && removeCondition.test(action.object)){
+                            if(action.removeCondition != null){ // this has priority
+                                if(action.removeCondition.test(action.object)){
+                                    actionsToRemove.add(action);
+                                    skip = true;
+                                }
+                            }
+                            else if(removeCondition!=null && removeCondition.test(action.object)){
                                 actionsToRemove.add(action);
                                 skip = true;
                             }
@@ -175,7 +181,10 @@ public class Event<T>{
                             for (Action<T> action :
                                     actions) {
                                 try{
-                                    if(removeCondition.test(action.object)) actionsToRemove.add(action);
+                                    if(action.removeCondition != null){ // this has priority
+                                        if(action.removeCondition.test(action.object)) actionsToRemove.add(action);
+                                    }
+                                    else if(removeCondition.test(action.object)) actionsToRemove.add(action);
                                 } catch (Exception e) {
                                     onConditionException.accept(e);
                                 }
