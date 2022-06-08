@@ -73,7 +73,7 @@ public class Event<T>{
 
                         if(!skip){
                             action.onEvent.accept(t);
-                            if(action.isOneTime) actionsToRemove.add(action);
+                            action.executionCount++;
                         }
                     } catch (Exception e) {
                         action.onException.accept(e);

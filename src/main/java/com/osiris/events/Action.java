@@ -8,6 +8,7 @@
 
 package com.osiris.events;
 
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -22,13 +23,14 @@ public class Action<T> {
      */
     public Consumer<Exception> onException;
     /**
-     * If true this action only gets executed once and removed from
-     * the {@link Event#actions} list.
+     * If you want to disable this, changing this to false will
+     * have no affect. Instead, set {@link #removeCondition} to null.
      */
     public boolean isOneTime;
+    public long executionCount = 0;
     /**
      * Can be null. <br>
-     * If not null, the values for {@link #isOneTime} and {@link Event#removeCondition} get ignored for this action. <br>
+     * If not null, {@link Event#removeCondition} gets ignored for this action. <br>
      * If true this action gets removed from the {@link Event#actions} list. <br>
      * This actions' {@link #object} is used to test this condition.
      */
@@ -53,5 +55,6 @@ public class Action<T> {
         this.onException = onException;
         this.isOneTime = isOneTime;
         this.object = object;
+        if(isOneTime) removeCondition = obj -> executionCount >= 1;
     }
 }
