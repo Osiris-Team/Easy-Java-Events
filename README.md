@@ -3,8 +3,19 @@ EJE provides accessible methods for handling events/actions/listeners.
 Add this as dependency to your project via
 [Maven/Gradle/Sbt/Leinigen](https://jitpack.io/#Osiris-Team/Easy-Java-Events/LATEST) (requires Java 8 or higher).
 
-It should take you 30 seconds to learn how this lib works. 
-Just skim over the code below.
+Learn the basics in 10 seconds:
+```java
+Event<Integer> onValueChanged = new Event<>();
+
+Action<Integer> myAction = onValueChanged.addAction(value -> { // Stays in memory and gets executed every time.
+    System.out.println("New value: "+value); // You can throw exceptions in here
+}, Exception::printStackTrace); // and catch them here.
+
+onValueChanged.execute(10); // Prints out "New value: 10"
+onValueChanged.execute(5); // Prints out "New value: 5"
+```
+
+Learn everything in 5 minutes:
 ```java
 class EventTest {
     @Test
