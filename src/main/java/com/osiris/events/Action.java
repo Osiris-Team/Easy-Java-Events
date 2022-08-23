@@ -14,8 +14,10 @@ import java.util.function.Predicate;
 public class Action<T> {
     /**
      * Holds code. Gets executed on an event.
+     * Has this action as first parameter and the value T
+     * as second one.
      */
-    public ConsumerWithException<Action<T>, T> onEvent;
+    public BetterBiConsumer<Action<T>, T> onEvent;
     /**
      * Holds code. Gets executed when an exception was thrown in the code held by {@link #onEvent}. <br>
      * Can be null. <br>
@@ -49,7 +51,7 @@ public class Action<T> {
      * @param isOneTime See {@link Action#isOneTime}.
      * @param object See {@link Action#object}.
      */
-    public Action(ConsumerWithException<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
+    public Action(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
         this.onEvent = onEvent;
         this.onException = onException;
         this.isOneTime = isOneTime;

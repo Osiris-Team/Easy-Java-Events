@@ -89,30 +89,77 @@ public class Event<T>{
     }
 
     /**
+     * Convenience method that throws {@link RuntimeException}
+     * when something goes wrong inside the provided event code.
+     */
+    public Action<T> addAction(BetterConsumer<T> onEvent){
+        return addAction((action, value) -> {onEvent.accept(value);}, ex -> {throw new RuntimeException(ex);}, false, null);
+    }
+
+    /**
+     * Convenience method that throws {@link RuntimeException}
+     * when something goes wrong inside the provided event code.
+     */
+    public Action<T> addOneTimeAction(BetterConsumer<T> onEvent){
+        return addAction((action, value) -> {onEvent.accept(value);}, ex -> {throw new RuntimeException(ex);}, true, null);
+    }
+
+    /**
+     * Convenience method, which ignores {@link Action} parameter from
+     * {@link BetterBiConsumer}. Useful when the action does not
+     * need to be referenced inside the event. <br>
+     * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
+     */
+    public Action<T> addAction(BetterConsumer<T> onEvent, Consumer<Exception> onException){
+        return addAction((action, value) -> {onEvent.accept(value);}, onException, false, null);
+    }
+
+    /**
+     * Convenience method, which ignores {@link Action} parameter from
+     * {@link BetterBiConsumer}. Useful when the action does not
+     * need to be referenced inside the event. <br>
+     * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
+     */
+    public Action<T> addOneTimeAction(BetterConsumer<T> onEvent, Consumer<Exception> onException){
+        return addAction((action, value) -> {onEvent.accept(value);}, onException, true, null);
+    }
+
+    /**
      * Creates and adds a new action to the {@link #actions} list. <br>
      * Gets ran every time {@link #execute(Object)} was called. <br>
+     * Usage: <br>
+     * <pre>
+     * event.addAction((action, value) -> {
+     *     // do stuff
+     * }, Exception::printStackTrace());
+     * </pre>
      * @param onEvent See {@link Action#onEvent}.
      * @param onException See {@link Action#onException}.
      */
-    public Action<T> addAction(ConsumerWithException<Action<T>, T> onEvent, Consumer<Exception> onException){
+    public Action<T> addAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException){
         return addAction(onEvent, onException, false, null);
     }
 
     /**
      * Creates and adds a new action to the {@link #actions} list. <br>
      * Gets ran only once, when {@link #execute(Object)} was called and removed from the {@link #actions} list directly after being run. <br>
-     * @param onEvent See {@link Action#onEvent}.
-     * @param onException See {@link Action#onException}.
+     * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> addOneTimeAction(ConsumerWithException<Action<T>, T> onEvent, Consumer<Exception> onException){
+    public Action<T> addOneTimeAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException){
         return addAction(onEvent, onException, true, null);
     }
 
-    public Action<T> addAction(ConsumerWithException<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime){
+    /**
+     * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
+     */
+    public Action<T> addAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime){
         return addAction(onEvent, onException, isOneTime, null);
     }
 
-    public Action<T> addAction(ConsumerWithException<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object){
+    /**
+     * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
+     */
+    public Action<T> addAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object){
         synchronized (actions){
             Action<T> action = new Action(onEvent, onException, isOneTime, object);
             actions.add(action);
@@ -126,6 +173,8 @@ public class Event<T>{
 
     /**
      * Removes the provided action from the {@link #actions} and {@link #actionsToRemove} lists.
+     * Note that you can remove an action directly in its event code
+     * via {@link Action#remove()}.
      * @return this event for chaining.
      */
     public Event<T> removeAction(Action<T> action){
