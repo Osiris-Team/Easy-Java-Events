@@ -7,9 +7,9 @@ Learn the basics in 10 seconds:
 ```java
 Event<Integer> onValueChanged = new Event<>();
 
-Action<Integer> myAction = onValueChanged.addAction(value -> { // Stays in memory and gets executed every time.
-    System.out.println("New value: "+value); // You can throw exceptions in here
-}, Exception::printStackTrace); // and catch them here.
+onValueChanged.addAction(value -> { 
+    System.out.println("New value: "+value); 
+}); 
 
 onValueChanged.execute(10); // Prints out "New value: 10"
 onValueChanged.execute(5); // Prints out "New value: 5"
