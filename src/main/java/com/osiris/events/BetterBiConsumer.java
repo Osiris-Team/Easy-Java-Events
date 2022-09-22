@@ -12,6 +12,7 @@ import java.util.Objects;
 
 /**
  * Makes handling exceptions easier.
+ *
  * @see java.util.function.Consumer
  */
 @FunctionalInterface
@@ -25,7 +26,7 @@ public interface BetterBiConsumer<A, T> {
     /**
      * @see java.util.function.Consumer
      */
-    default BetterBiConsumer<A,T> andThen(BetterBiConsumer<A, T> after) throws Exception {
+    default BetterBiConsumer<A, T> andThen(BetterBiConsumer<A, T> after) throws Exception {
         Objects.requireNonNull(after);
         return (A a, T t) -> {
             accept(a, t);

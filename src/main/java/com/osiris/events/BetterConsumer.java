@@ -12,6 +12,7 @@ import java.util.Objects;
 
 /**
  * Makes handling exceptions easier.
+ *
  * @see java.util.function.Consumer
  */
 @FunctionalInterface

@@ -45,17 +45,18 @@ public class Action<T> {
 
     /**
      * Creates an action.
-     * @param onEvent See {@link Action#onEvent}.
+     *
+     * @param onEvent     See {@link Action#onEvent}.
      * @param onException See {@link Action#onException}.
-     * @param isOneTime See {@link Action#isOneTime}.
-     * @param object See {@link Action#object}.
+     * @param isOneTime   See {@link Action#isOneTime}.
+     * @param object      See {@link Action#object}.
      */
     public Action(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
         this.onEvent = onEvent;
         this.onException = onException;
         this.isOneTime = isOneTime;
         this.object = object;
-        if(isOneTime) oneTime();
+        if (isOneTime) oneTime();
     }
 
     /**
@@ -64,7 +65,7 @@ public class Action<T> {
      * before this action executes the next time, or
      * when the {@link Event#cleanerThread} checks next time.
      */
-    public void remove(){
+    public void remove() {
         removeCondition = obj -> true;
     }
 
@@ -72,11 +73,11 @@ public class Action<T> {
      * Force removes this action from the provided event. <br>
      * <p style="color:red">Note that this results in a deadlock, when called during action execution!</p>
      */
-    public void forceRemove(Event<T> event){
+    public void forceRemove(Event<T> event) {
         event.removeAction(this);
     }
 
-    public void oneTime(){
+    public void oneTime() {
         removeCondition = obj -> executionCount >= 1;
     }
 }

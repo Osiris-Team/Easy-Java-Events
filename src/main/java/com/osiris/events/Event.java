@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-public class Event<T>{
+public class Event<T> {
     /**
      * List of actions that get executed when this event happens. <br>
      * See also: <br>
@@ -48,6 +48,7 @@ public class Event<T>{
 
     /**
      * Creates a new event.
+     *
      * @param actions See {@link #actions}.
      */
     public Event(List<Action<T>> actions) {
@@ -57,6 +58,7 @@ public class Event<T>{
 
     /**
      * Creates a new event.
+     *
      * @param actionsMap See {@link #actionsMap}.
      */
     public Event(Map<Object, Action<T>> actionsMap) {
@@ -73,18 +75,19 @@ public class Event<T>{
      * Executes all the {@link #actions} + {@link #actionsMap} for this event. <br>
      * If {@link #removeCondition} is not null and valid the action gets not executed and removed from {@link #actions}. <br>
      * Note that you will get a {@link NullPointerException} when the condition check throws an exception and {@link #onConditionException} is null. <br>
+     *
      * @param t optional object to pass over to the action, so that it has more information about the occured event.
      * @return this event for chaining.
      */
-    public Event<T> execute(T t){
-        synchronized (this){
-            for (Action<T> action: actions) {
+    public Event<T> execute(T t) {
+        synchronized (this) {
+            for (Action<T> action : actions) {
                 executeAction(action, t);
             }
             actionsMap.forEach((key, action) -> {
                 executeAction(action, t);
             });
-            if(!actionsToRemove.isEmpty()) {
+            if (!actionsToRemove.isEmpty()) {
                 removeRemovableActions();
             }
         }
@@ -92,16 +95,15 @@ public class Event<T>{
     }
 
     private void executeAction(Action<T> action, T t) {
-        try{
+        try {
             boolean skip = false;
-            try{
-                if(action.removeCondition != null){ // this has priority
-                    if(action.removeCondition.test(action.object)){
+            try {
+                if (action.removeCondition != null) { // this has priority
+                    if (action.removeCondition.test(action.object)) {
                         actionsToRemove.add(action);
                         skip = true;
                     }
-                }
-                else if(removeCondition!=null && removeCondition.test(action.object)){
+                } else if (removeCondition != null && removeCondition.test(action.object)) {
                     actionsToRemove.add(action);
                     skip = true;
                 }
@@ -110,7 +112,7 @@ public class Event<T>{
                 skip = true;
             }
 
-            if(!skip){
+            if (!skip) {
                 action.onEvent.accept(action, t);
                 action.executionCount++;
             }
@@ -123,16 +125,24 @@ public class Event<T>{
      * Convenience method that throws {@link RuntimeException}
      * when something goes wrong inside the provided event code.
      */
-    public Action<T> addAction(BetterConsumer<T> onEvent){
-        return addAction((action, value) -> {onEvent.accept(value);}, ex -> {throw new RuntimeException(ex);}, false, null);
+    public Action<T> addAction(BetterConsumer<T> onEvent) {
+        return addAction((action, value) -> {
+            onEvent.accept(value);
+        }, ex -> {
+            throw new RuntimeException(ex);
+        }, false, null);
     }
 
     /**
      * Convenience method that throws {@link RuntimeException}
      * when something goes wrong inside the provided event code.
      */
-    public Action<T> addOneTimeAction(BetterConsumer<T> onEvent){
-        return addAction((action, value) -> {onEvent.accept(value);}, ex -> {throw new RuntimeException(ex);}, true, null);
+    public Action<T> addOneTimeAction(BetterConsumer<T> onEvent) {
+        return addAction((action, value) -> {
+            onEvent.accept(value);
+        }, ex -> {
+            throw new RuntimeException(ex);
+        }, true, null);
     }
 
     /**
@@ -141,8 +151,10 @@ public class Event<T>{
      * need to be referenced inside the event. <br>
      * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> addAction(BetterConsumer<T> onEvent, Consumer<Exception> onException){
-        return addAction((action, value) -> {onEvent.accept(value);}, onException, false, null);
+    public Action<T> addAction(BetterConsumer<T> onEvent, Consumer<Exception> onException) {
+        return addAction((action, value) -> {
+            onEvent.accept(value);
+        }, onException, false, null);
     }
 
     /**
@@ -151,8 +163,10 @@ public class Event<T>{
      * need to be referenced inside the event. <br>
      * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> addOneTimeAction(BetterConsumer<T> onEvent, Consumer<Exception> onException){
-        return addAction((action, value) -> {onEvent.accept(value);}, onException, true, null);
+    public Action<T> addOneTimeAction(BetterConsumer<T> onEvent, Consumer<Exception> onException) {
+        return addAction((action, value) -> {
+            onEvent.accept(value);
+        }, onException, true, null);
     }
 
     /**
@@ -164,10 +178,11 @@ public class Event<T>{
      *     // do stuff
      * }, Exception::printStackTrace());
      * </pre>
-     * @param onEvent See {@link Action#onEvent}.
+     *
+     * @param onEvent     See {@link Action#onEvent}.
      * @param onException See {@link Action#onException}.
      */
-    public Action<T> addAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException){
+    public Action<T> addAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException) {
         return addAction(onEvent, onException, false, null);
     }
 
@@ -176,25 +191,25 @@ public class Event<T>{
      * Gets ran only once, when {@link #execute(Object)} was called and removed from the {@link #actions} list directly after being run. <br>
      * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> addOneTimeAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException){
+    public Action<T> addOneTimeAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException) {
         return addAction(onEvent, onException, true, null);
     }
 
     /**
      * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> addAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime){
+    public Action<T> addAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime) {
         return addAction(onEvent, onException, isOneTime, null);
     }
 
     /**
      * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> addAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object){
-        synchronized (this){
+    public Action<T> addAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
+        synchronized (this) {
             Action<T> action = new Action(onEvent, onException, isOneTime, object);
             actions.add(action);
-            if(cleanerThread != null && !cleanerThread.isAlive()){
+            if (cleanerThread != null && !cleanerThread.isAlive()) {
                 cleanerThread = new Thread(cleanerRunnable);
                 cleanerThread.start();
             }
@@ -210,16 +225,24 @@ public class Event<T>{
      * Convenience method that throws {@link RuntimeException}
      * when something goes wrong inside the provided event code.
      */
-    public Action<T> putAction(Object key, BetterConsumer<T> onEvent){
-        return putAction(key, (action, value) -> {onEvent.accept(value);}, ex -> {throw new RuntimeException(ex);}, false, null);
+    public Action<T> putAction(Object key, BetterConsumer<T> onEvent) {
+        return putAction(key, (action, value) -> {
+            onEvent.accept(value);
+        }, ex -> {
+            throw new RuntimeException(ex);
+        }, false, null);
     }
 
     /**
      * Convenience method that throws {@link RuntimeException}
      * when something goes wrong inside the provided event code.
      */
-    public Action<T> putOneTimeAction(Object key, BetterConsumer<T> onEvent){
-        return putAction(key, (action, value) -> {onEvent.accept(value);}, ex -> {throw new RuntimeException(ex);}, true, null);
+    public Action<T> putOneTimeAction(Object key, BetterConsumer<T> onEvent) {
+        return putAction(key, (action, value) -> {
+            onEvent.accept(value);
+        }, ex -> {
+            throw new RuntimeException(ex);
+        }, true, null);
     }
 
     /**
@@ -228,8 +251,10 @@ public class Event<T>{
      * need to be referenced inside the event. <br>
      * See {@link #putAction(Object, BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> putAction(Object key, BetterConsumer<T> onEvent, Consumer<Exception> onException){
-        return putAction(key, (action, value) -> {onEvent.accept(value);}, onException, false, null);
+    public Action<T> putAction(Object key, BetterConsumer<T> onEvent, Consumer<Exception> onException) {
+        return putAction(key, (action, value) -> {
+            onEvent.accept(value);
+        }, onException, false, null);
     }
 
     /**
@@ -238,8 +263,10 @@ public class Event<T>{
      * need to be referenced inside the event. <br>
      * See {@link #putAction(Object, BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> putOneTimeAction(Object key, BetterConsumer<T> onEvent, Consumer<Exception> onException){
-        return putAction(key, (action, value) -> {onEvent.accept(value);}, onException, true, null);
+    public Action<T> putOneTimeAction(Object key, BetterConsumer<T> onEvent, Consumer<Exception> onException) {
+        return putAction(key, (action, value) -> {
+            onEvent.accept(value);
+        }, onException, true, null);
     }
 
     /**
@@ -251,10 +278,11 @@ public class Event<T>{
      *     // do stuff
      * }, Exception::printStackTrace());
      * </pre>
-     * @param onEvent See {@link Action#onEvent}.
+     *
+     * @param onEvent     See {@link Action#onEvent}.
      * @param onException See {@link Action#onException}.
      */
-    public Action<T> putAction(Object key, BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException){
+    public Action<T> putAction(Object key, BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException) {
         return putAction(key, onEvent, onException, false, null);
     }
 
@@ -263,25 +291,25 @@ public class Event<T>{
      * Gets ran only once, when {@link #execute(Object)} was called and removed from the {@link #actionsMap} directly after being run. <br>
      * See {@link #putAction(Object, BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> putOneTimeAction(Object key, BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException){
+    public Action<T> putOneTimeAction(Object key, BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException) {
         return putAction(key, onEvent, onException, true, null);
     }
 
     /**
      * See {@link #putAction(Object, BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> putAction(Object key, BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime){
+    public Action<T> putAction(Object key, BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime) {
         return putAction(key, onEvent, onException, isOneTime, null);
     }
 
     /**
      * See {@link #putAction(Object, BetterBiConsumer, Consumer)} for details. <br>
      */
-    public Action<T> putAction(Object key, BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object){
-        synchronized (this){
+    public Action<T> putAction(Object key, BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
+        synchronized (this) {
             Action<T> action = new Action(onEvent, onException, isOneTime, object);
             actionsMap.put(key, action);
-            if(cleanerThread != null && !cleanerThread.isAlive()){
+            if (cleanerThread != null && !cleanerThread.isAlive()) {
                 cleanerThread = new Thread(cleanerRunnable);
                 cleanerThread.start();
             }
@@ -293,8 +321,8 @@ public class Event<T>{
      * Only affects {@link #actionsMap}. <br>
      * See {@link #removeAction(Action)} for details. <br>
      */
-    public Event<T> removeActionByKey(Object key){
-        synchronized (this){
+    public Event<T> removeActionByKey(Object key) {
+        synchronized (this) {
             actionsMap.remove(key);
         }
         return this;
@@ -305,16 +333,17 @@ public class Event<T>{
      * as well as the {@link #actionsMap}.
      * Note that you can remove an action directly in its event code
      * via {@link Action#remove()}.
+     *
      * @return this event for chaining.
      */
-    public Event<T> removeAction(Action<T> action){
-        synchronized (this){
+    public Event<T> removeAction(Action<T> action) {
+        synchronized (this) {
             actions.remove(action);
             actionsToRemove.remove(action);
-            if(!actionsMap.isEmpty()){
+            if (!actionsMap.isEmpty()) {
                 List<Object> removable = new ArrayList<>();
                 actionsMap.forEach((key, action2) -> {
-                    if(action2.equals(action))
+                    if (action2.equals(action))
                         removable.add(key);
                 });
                 for (Object key : removable) {
@@ -325,7 +354,7 @@ public class Event<T>{
         return this;
     }
 
-    public void removeRemovableActions(){
+    public void removeRemovableActions() {
         for (Action<T> actionsToRemove : getActionsToRemove()) {
             removeAction(actionsToRemove);
         }
@@ -334,8 +363,8 @@ public class Event<T>{
     /**
      * Returns a copy of {@link #actions}.
      */
-    public List<Action<T>> getActions(){
-        synchronized (actions){
+    public List<Action<T>> getActions() {
+        synchronized (actions) {
             return new ArrayList<>(actions);
         }
     }
@@ -343,8 +372,8 @@ public class Event<T>{
     /**
      * Returns a copy of {@link #actionsMap}.
      */
-    public HashMap<Object, Action<T>> getActionsMap(){
-        synchronized (actionsMap){
+    public HashMap<Object, Action<T>> getActionsMap() {
+        synchronized (actionsMap) {
             return new HashMap<Object, Action<T>>(actionsMap);
         }
     }
@@ -352,8 +381,8 @@ public class Event<T>{
     /**
      * Returns a copy of {@link #actionsToRemove}.
      */
-    public List<Action<T>> getActionsToRemove(){
-        synchronized (actionsToRemove){
+    public List<Action<T>> getActionsToRemove() {
+        synchronized (actionsToRemove) {
             return new ArrayList<>(actionsToRemove);
         }
     }
@@ -365,22 +394,24 @@ public class Event<T>{
      * The initialised thread throws {@link RuntimeException} if something went wrong. <br>
      * Note that when {@link #actions} is empty the cleaner thread stops. <br>
      * A new cleaner thread gets created once a new action is added. <br>
-     * @param msBetweenChecks the amount of milliseconds between each check.
-     * @param removeCondition when true, removes that action from the list.
+     *
+     * @param msBetweenChecks      the amount of milliseconds between each check.
+     * @param removeCondition      when true, removes that action from the list.
      * @param onConditionException gets executed when something went wrong during condition checking.
      * @return this event for chaining.
      */
-    public Event<T> initCleaner(int msBetweenChecks, Predicate<Object> removeCondition, Consumer<Exception> onConditionException){
+    public Event<T> initCleaner(int msBetweenChecks, Predicate<Object> removeCondition, Consumer<Exception> onConditionException) {
         if (cleanerThread != null) return this;
         this.removeCondition = removeCondition;
         this.onConditionException = onConditionException;
         final Object thisReference = this;
         cleanerRunnable = () -> {
-            try{
-                while (true){
+            try {
+                while (true) {
                     Thread.sleep(msBetweenChecks);
-                    synchronized (thisReference){
-                        if(actions.isEmpty()) break; // Stops the thread, thread gets restarted when a new action is added
+                    synchronized (thisReference) {
+                        if (actions.isEmpty())
+                            break; // Stops the thread, thread gets restarted when a new action is added
                         for (Action<T> action : actions) {
                             markAsRemovableIfNeeded(action);
                         }
@@ -400,11 +431,10 @@ public class Event<T>{
     }
 
     private void markAsRemovableIfNeeded(Action<T> action) {
-        try{
-            if(action.removeCondition != null){ // this has priority
-                if(action.removeCondition.test(action.object)) actionsToRemove.add(action);
-            }
-            else if(removeCondition.test(action.object)) actionsToRemove.add(action);
+        try {
+            if (action.removeCondition != null) { // this has priority
+                if (action.removeCondition.test(action.object)) actionsToRemove.add(action);
+            } else if (removeCondition.test(action.object)) actionsToRemove.add(action);
         } catch (Exception e) {
             onConditionException.accept(e);
         }
