@@ -2,6 +2,8 @@ package com.osiris.events;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class EventTest {
@@ -49,5 +51,17 @@ class EventTest {
             System.out.println("New value: "+value);
         }, Exception::printStackTrace);
         assertTrue(onValueChanged.cleanerThread.isAlive());
+    }
+
+    @Test
+    void putAction() {
+        AtomicBoolean executed = new AtomicBoolean(false);
+        Event<Integer> onValueChanged = new Event<>();
+        onValueChanged.putAction(executed, val -> {
+           executed.set(true);
+        });
+        onValueChanged.execute(10);
+        assertTrue(executed.get());
+        assertNotNull(onValueChanged.getActionsMap().get(executed));
     }
 }

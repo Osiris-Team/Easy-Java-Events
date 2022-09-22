@@ -14,8 +14,7 @@ import java.util.function.Predicate;
 public class Action<T> {
     /**
      * Holds code. Gets executed on an event.
-     * Has this action as first parameter and the value T
-     * as second one.
+     * Has itself as first parameter and the value T as second one.
      */
     public BetterBiConsumer<Action<T>, T> onEvent;
     /**
@@ -32,7 +31,7 @@ public class Action<T> {
     /**
      * Can be null. <br>
      * If not null, {@link Event#removeCondition} gets ignored for this action. <br>
-     * If true this action gets removed from the {@link Event#actions} list. <br>
+     * If true this action gets removed from the {@link Event#getActions()} list. <br>
      * This actions' {@link #object} is used to test this condition.
      */
     public Predicate<Object> removeCondition;
