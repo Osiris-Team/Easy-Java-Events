@@ -6,7 +6,7 @@
 
     <groupId>com.osiris.events</groupId>
     <artifactId>EJE</artifactId>
-    <version>1.4.0</version>
+    <version>LATEST</version>
     <packaging>jar</packaging>
 
     <name>Easy-Java-Events</name>
