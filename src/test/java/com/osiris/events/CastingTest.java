@@ -9,11 +9,11 @@ class CastingTest {
     void test() throws InterruptedException {
         Event<Integer> onValueChanged = new Event<>();
         Action<Integer> actionToRemove = onValueChanged.addAction((a, value) -> {
-            System.out.println("New value: "+value+", but I will be gone soon :/");
+            System.out.println("New value: " + value + ", but I will be gone soon :/");
         }, Exception::printStackTrace, false, null);
         onValueChanged.initCleaner(100, object -> (Boolean) object, Exception::printStackTrace);
         actionToRemove.object = Boolean.TRUE;
         onValueChanged.execute(1);
-        assertEquals(0, onValueChanged.getActions().size());
+        assertEquals(0, onValueChanged.getActionsCopy().size());
     }
 }

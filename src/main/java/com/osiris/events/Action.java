@@ -13,6 +13,12 @@ import java.util.function.Predicate;
 
 public class Action<T> {
     /**
+     * If you want to disable this, changing this to false will
+     * have no affect. Instead, set {@link #removeCondition} to null.
+     */
+    public final boolean isOneTime;
+    public Event<T> event;
+    /**
      * Holds code. Gets executed on an event.
      * Has itself as first parameter and the value T as second one.
      */
@@ -22,16 +28,11 @@ public class Action<T> {
      * Can be null. <br>
      */
     public Consumer<Exception> onException;
-    /**
-     * If you want to disable this, changing this to false will
-     * have no affect. Instead, set {@link #removeCondition} to null.
-     */
-    public boolean isOneTime;
     public long executionCount = 0;
     /**
      * Can be null. <br>
-     * If not null, {@link Event#removeCondition} gets ignored for this action. <br>
-     * If true this action gets removed from the {@link Event#getActions()} list. <br>
+     * If not null, {@link Event#defaultActionRemoveCondition} gets ignored for this action. <br>
+     * If true this action gets removed from the {@link Event#getActionsCopy()} list. <br>
      * This actions' {@link #object} is used to test this condition.
      */
     public Predicate<Object> removeCondition;
@@ -51,7 +52,8 @@ public class Action<T> {
      * @param isOneTime   See {@link Action#isOneTime}.
      * @param object      See {@link Action#object}.
      */
-    public Action(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
+    public Action(Event<T> event, BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
+        this.event = event;
         this.onEvent = onEvent;
         this.onException = onException;
         this.isOneTime = isOneTime;
@@ -60,21 +62,11 @@ public class Action<T> {
     }
 
     /**
-     * Marks this action to be removed. <br>
-     * Note that this will not happen directly. It gets removed
-     * before this action executes the next time, or
-     * when the {@link Event#cleanerThread} checks next time.
+     * Marks this action to be removed from the event It's attached to. <br>
+     * Note that this will not happen directly, see {@link Event#markActionAsRemovable(Action)} for details.
      */
     public void remove() {
-        removeCondition = obj -> true;
-    }
-
-    /**
-     * Force removes this action from the provided event. <br>
-     * <p style="color:red">Note that this results in a deadlock, when called during action execution!</p>
-     */
-    public void forceRemove(Event<T> event) {
-        event.removeAction(this);
+        event.markActionAsRemovable(this);
     }
 
     public void oneTime() {

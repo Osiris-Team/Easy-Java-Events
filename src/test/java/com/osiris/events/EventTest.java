@@ -2,16 +2,15 @@ package com.osiris.events;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EventTest {
     @Test
     void example() throws InterruptedException {
         Event<Integer> onValueChanged = new Event<>();
         Action<Integer> myAction = onValueChanged.addAction(value -> { // Stays in memory and gets executed every time.
-            System.out.println("New value: "+value);
+            System.out.println("New value: " + value);
             // You can throw exceptions in here
         }, Exception::printStackTrace); // and catch them here.
 
@@ -20,7 +19,7 @@ class EventTest {
 
         // One time actions that only get executed once, are also supported:
         onValueChanged.addOneTimeAction(value -> {
-            System.out.println("New value: "+value+" bye!");
+            System.out.println("New value: " + value + " bye!");
         }, Exception::printStackTrace);
 
         onValueChanged.execute(7); // Prints out "New value: 7" and "New value: 7 bye!"
@@ -29,7 +28,7 @@ class EventTest {
         // you must remove unused actions. There are some util methods for this case.
         // First we create a new action with additional params: isOneTime=false and object=null.
         Action<Integer> actionToRemove = onValueChanged.addAction((action, value) -> {
-            System.out.println("New value: "+value+", but I will be gone soon :/");
+            System.out.println("New value: " + value + ", but I will be gone soon :/");
         }, Exception::printStackTrace, false, null);
 
         // Then we initialise the cleaner thread for this event, which checks
@@ -44,24 +43,12 @@ class EventTest {
 
         // Actual tests:
         Thread.sleep(200);
-        assertEquals(1, onValueChanged.getActions().size());
-        onValueChanged.removeAction(myAction);
+        assertEquals(1, onValueChanged.getActionsCopy().size());
+        onValueChanged.markActionAsRemovable(myAction);
         Thread.sleep(200);
         onValueChanged.addAction((a, value) -> {
-            System.out.println("New value: "+value);
+            System.out.println("New value: " + value);
         }, Exception::printStackTrace);
         assertTrue(onValueChanged.cleanerThread.isAlive());
-    }
-
-    @Test
-    void putAction() {
-        AtomicBoolean executed = new AtomicBoolean(false);
-        Event<Integer> onValueChanged = new Event<>();
-        onValueChanged.putAction(executed, val -> {
-           executed.set(true);
-        });
-        onValueChanged.execute(10);
-        assertTrue(executed.get());
-        assertNotNull(onValueChanged.getActionsMap().get(executed));
     }
 }
