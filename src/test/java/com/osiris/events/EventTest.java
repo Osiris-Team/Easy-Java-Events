@@ -32,9 +32,9 @@ class EventTest {
         }, Exception::printStackTrace, false, null);
 
         // Then we initialise the cleaner thread for this event, which checks
-        // its actions list every 100ms for actions that
+        // its actions list every 1s for actions that
         // fulfill the condition "object != null" and removes those.
-        onValueChanged.initCleaner(100, object -> object != null, Exception::printStackTrace);
+        onValueChanged.initCleaner(1, object -> object != null, Exception::printStackTrace);
 
         // Once we want to remove the action, we simply give it an object that is not null.
         // The cleaner then removes it in the next check.
@@ -42,13 +42,12 @@ class EventTest {
 
 
         // Actual tests:
-        Thread.sleep(200);
+        Thread.sleep(3000);
         assertEquals(1, onValueChanged.getActionsCopy().size());
         onValueChanged.markActionAsRemovable(myAction);
-        Thread.sleep(200);
+        Thread.sleep(3000);
         onValueChanged.addAction((a, value) -> {
             System.out.println("New value: " + value);
         }, Exception::printStackTrace);
-        assertTrue(onValueChanged.cleanerThread.isAlive());
     }
 }

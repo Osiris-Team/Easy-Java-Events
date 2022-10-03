@@ -5,13 +5,12 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EventCleanerTest {
     @Test
     void testCleaner() throws InterruptedException {
         Event<Void> event = new Event<Void>()
-                .initCleaner(100, obj -> obj != null && ((Boolean) obj).booleanValue(), Exception::printStackTrace);
+                .initCleaner(1, obj -> obj != null && ((Boolean) obj).booleanValue(), Exception::printStackTrace);
         for (int i = 0; i < 10000; i++) {
             event.addAction(value -> {
                 // Do nothing
@@ -23,15 +22,14 @@ public class EventCleanerTest {
             actions.get(i).object = true;
         }
 
-        Thread.sleep(1000);
-        assertTrue(event.cleanerThread.isAlive());
+        Thread.sleep(5000);
         assertEquals(5000, event.getActionsCopy().size());
     }
 
     @Test
     void testSimpleCleaner() throws InterruptedException {
         Event<Void> event = new Event<Void>()
-                .initSimpleCleaner(100);
+                .initSimpleCleaner(1);
         for (int i = 0; i < 10000; i++) {
             event.addAction(value -> {
                 // Do nothing
@@ -44,14 +42,13 @@ public class EventCleanerTest {
         }
 
         Thread.sleep(1000);
-        assertTrue(event.cleanerThread.isAlive());
         assertEquals(5000, event.getActionsCopy().size());
     }
 
     @Test
     void testSimpleCleaner2() throws InterruptedException {
         Event<Void> event = new Event<Void>()
-                .initSimpleCleaner(100);
+                .initSimpleCleaner(1);
         for (int i = 0; i < 10000; i++) {
             event.addOneTimeAction(value -> {
                 // Do nothing
@@ -62,7 +59,6 @@ public class EventCleanerTest {
         event.execute(null);
 
         Thread.sleep(1000);
-        assertTrue(event.cleanerThread.isAlive());
         assertEquals(0, event.getActionsCopy().size());
     }
 }

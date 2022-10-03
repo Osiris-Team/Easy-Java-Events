@@ -9,7 +9,9 @@
 package com.osiris.events;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -22,10 +24,47 @@ public class Event<T> {
      */
     private final List<Action<T>> actions;
     private final List<Action<T>> actionsToRemove = new ArrayList<>();
-    public Thread cleanerThread;
-    public Runnable cleanerRunnable;
     public Predicate<Object> defaultActionRemoveCondition;
     public Consumer<Exception> onConditionException;
+    public int secondsBetweenChecks = 0;
+    public Runnable cleanerRunnable;
+    private static final Map<Integer, WrappedRunnable> map = new HashMap<>();
+    /**
+     * Single thread that executes {@link #cleanerRunnable} of every event. <br>
+     * Responsible for event garbage collection. <br>
+     */
+    private static Thread mainCleanerThread = new Thread(() -> {
+        try{
+            while (true){
+                Thread.sleep(1000);
+                map.forEach((sleepSeconds, wrappedRunnable) -> {
+                    wrappedRunnable.currentSleepSeconds--;
+                    if(wrappedRunnable.currentSleepSeconds <= 0){
+                        wrappedRunnable.currentSleepSeconds = sleepSeconds;
+                        for (Event<?> event : wrappedRunnable.events) {
+                            event.cleanerRunnable.run();
+                        }
+                        List<Event<?>> removableEvents = new ArrayList<>(0);
+                        for (Event<?> event : wrappedRunnable.events) {
+                            synchronized (event.actions){
+                                if(event.actions.isEmpty())
+                                    removableEvents.add(event);
+                            }
+                        }
+                        for (Event<?> removableEvent : removableEvents) {
+                            wrappedRunnable.events.remove(removableEvent);
+                        }
+                    }
+                });
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    });
+    static{
+        mainCleanerThread.setName("Easy-Java-Events-Cleaner");
+        mainCleanerThread.start();
+    }
 
     /**
      * Creates a new event with an empty {@link #actions} list.
@@ -157,6 +196,15 @@ public class Event<T> {
         synchronized (actions) {
             Action<T> action = new Action(this, onEvent, onException, isOneTime, object);
             actions.add(action);
+            if(cleanerRunnable != null)
+                synchronized (map){
+                    WrappedRunnable wrappedRunnable = map.get(secondsBetweenChecks);
+                    if(wrappedRunnable == null){
+                        wrappedRunnable = new WrappedRunnable(secondsBetweenChecks);
+                        map.put(secondsBetweenChecks, wrappedRunnable);
+                    }
+                    wrappedRunnable.events.add(this);
+                }
             return action;
         }
     }
@@ -192,7 +240,7 @@ public class Event<T> {
     /**
      * Provided action will be removed from this event... <br>
      * ... before it gets executed the next time. <br>
-     * ... by the {@link #cleanerThread} if it is active. <br>
+     * ... by the {@link #cleanerRunnable}. <br>
      *
      * @return this event for chaining.
      */
@@ -237,7 +285,7 @@ public class Event<T> {
      * @see #initCleaner(int, Predicate, Consumer)
      */
     public Event<T> initCleaner() {
-        initCleaner(60000,
+        initCleaner(60,
                 this.defaultActionRemoveCondition,
                 (this.onConditionException != null ? this.onConditionException : ex -> {
                     throw new RuntimeException(ex);
@@ -248,19 +296,23 @@ public class Event<T> {
     /**
      * Similar to {@link #initSimpleCleaner(int)} but checks the {@link #actions} via {@link #markActionAsRemovableIfNeeded(Action)}.
      *
-     * @param msBetweenChecks              the amount of milliseconds between each check.
+     * @param secondsBetweenChecks              the amount of seconds between each check.
      * @param defaultActionRemoveCondition when true, removes that action from the list.
      * @param onConditionException         gets executed when something went wrong during condition checking.
      * @return this event for chaining.
      */
-    public Event<T> initCleaner(int msBetweenChecks, Predicate<Object> defaultActionRemoveCondition, Consumer<Exception> onConditionException) {
-        if (cleanerThread != null) return this;
+    public Event<T> initCleaner(int secondsBetweenChecks, Predicate<Object> defaultActionRemoveCondition, Consumer<Exception> onConditionException) {
+        this.secondsBetweenChecks = secondsBetweenChecks;
         this.defaultActionRemoveCondition = defaultActionRemoveCondition;
         this.onConditionException = onConditionException;
-        cleanerRunnable = () -> {
-            try {
-                while (true) {
-                    Thread.sleep(msBetweenChecks);
+        synchronized (map){
+            WrappedRunnable wrappedRunnable = map.get(secondsBetweenChecks);
+            if(wrappedRunnable == null){
+                wrappedRunnable = new WrappedRunnable(secondsBetweenChecks);
+                map.put(secondsBetweenChecks, wrappedRunnable);
+            }
+            this.cleanerRunnable = () -> {
+                try {
                     synchronized (actions) {
                         for (Action<T> action : actions) {
                             try {
@@ -271,13 +323,12 @@ public class Event<T> {
                         }
                         removeActionsToRemove();
                     }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        };
-        cleanerThread = new Thread(cleanerRunnable);
-        cleanerThread.start();
+            };
+            wrappedRunnable.events.add(this);
+        }
         return this;
     }
 
@@ -285,7 +336,7 @@ public class Event<T> {
      * @see #initSimpleCleaner(int)
      */
     public Event<T> initSimpleCleaner() {
-        initSimpleCleaner(60000); // 60 seconds interval
+        initSimpleCleaner(60);
         return this;
     }
 
@@ -295,24 +346,27 @@ public class Event<T> {
      * Does nothing if already initialised. <br>
      * The initialised thread throws {@link RuntimeException} if something went wrong. <br>
      *
-     * @param msBetweenChecks the amount of milliseconds between each check.
+     * @param secondsBetweenChecks the amount of seconds between each check.
      * @return this event for chaining.
      * @see #removeActionsToRemove()
      */
-    public Event<T> initSimpleCleaner(int msBetweenChecks) {
-        if (cleanerThread != null) return this;
-        cleanerRunnable = () -> {
-            try {
-                while (true) {
-                    Thread.sleep(msBetweenChecks);
-                    removeActionsToRemove();
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+    public Event<T> initSimpleCleaner(int secondsBetweenChecks) {
+        this.secondsBetweenChecks = secondsBetweenChecks;
+        synchronized (map){
+            WrappedRunnable wrappedRunnable = map.get(secondsBetweenChecks);
+            if(wrappedRunnable == null){
+                wrappedRunnable = new WrappedRunnable(secondsBetweenChecks);
+                map.put(secondsBetweenChecks, wrappedRunnable);
             }
-        };
-        cleanerThread = new Thread(cleanerRunnable);
-        cleanerThread.start();
+            this.cleanerRunnable = () -> {
+                try {
+                    removeActionsToRemove();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            };
+            wrappedRunnable.events.add(this);
+        }
         return this;
     }
 }
