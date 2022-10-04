@@ -37,25 +37,27 @@ public class Event<T> {
         try{
             while (true){
                 Thread.sleep(1000);
-                map.forEach((sleepSeconds, wrappedRunnable) -> {
-                    wrappedRunnable.currentSleepSeconds--;
-                    if(wrappedRunnable.currentSleepSeconds <= 0){
-                        wrappedRunnable.currentSleepSeconds = sleepSeconds;
-                        for (Event<?> event : wrappedRunnable.events) {
-                            event.cleanerRunnable.run();
-                        }
-                        List<Event<?>> removableEvents = new ArrayList<>(0);
-                        for (Event<?> event : wrappedRunnable.events) {
-                            synchronized (event.actions){
-                                if(event.actions.isEmpty())
-                                    removableEvents.add(event);
+                synchronized (map){
+                    map.forEach((sleepSeconds, wrappedRunnable) -> {
+                        wrappedRunnable.currentSleepSeconds--;
+                        if(wrappedRunnable.currentSleepSeconds <= 0){
+                            wrappedRunnable.currentSleepSeconds = sleepSeconds;
+                            for (Event<?> event : wrappedRunnable.events) {
+                                event.cleanerRunnable.run();
+                            }
+                            List<Event<?>> removableEvents = new ArrayList<>(0);
+                            for (Event<?> event : wrappedRunnable.events) {
+                                synchronized (event.actions){
+                                    if(event.actions.isEmpty())
+                                        removableEvents.add(event);
+                                }
+                            }
+                            for (Event<?> removableEvent : removableEvents) {
+                                wrappedRunnable.events.remove(removableEvent);
                             }
                         }
-                        for (Event<?> removableEvent : removableEvents) {
-                            wrappedRunnable.events.remove(removableEvent);
-                        }
-                    }
-                });
+                    });
+                }
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
