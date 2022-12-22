@@ -12,45 +12,33 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public class Event<T> {
-    /**
-     * List of actions that get executed when this event happens. <br>
-     * See also: <br>
-     * {@link #execute(Object)} <br>
-     * {@link #addAction(BetterBiConsumer, Consumer)} <br>
-     */
-    private final List<Action<T>> actions;
-    private final List<Action<T>> actionsToRemove = new ArrayList<>();
-    public Predicate<Object> defaultActionRemoveCondition;
-    public Consumer<Exception> onConditionException;
-    public int secondsBetweenChecks = 0;
-    public Runnable cleanerRunnable;
     private static final Map<Integer, WrappedRunnable> map = new HashMap<>();
     /**
      * Single thread that executes {@link #cleanerRunnable} of every event. <br>
      * Responsible for event garbage collection. <br>
      */
-    private static Thread mainCleanerThread = new Thread(() -> {
-        try{
-            while (true){
+    private static final Thread mainCleanerThread = new Thread(() -> {
+        try {
+            while (true) {
                 Thread.sleep(1000);
-                synchronized (map){
+                synchronized (map) {
                     map.forEach((sleepSeconds, wrappedRunnable) -> {
                         wrappedRunnable.currentSleepSeconds--;
-                        if(wrappedRunnable.currentSleepSeconds <= 0){
+                        if (wrappedRunnable.currentSleepSeconds <= 0) {
                             wrappedRunnable.currentSleepSeconds = sleepSeconds;
                             for (Event<?> event : wrappedRunnable.events) {
                                 event.cleanerRunnable.run();
                             }
                             List<Event<?>> removableEvents = new ArrayList<>(0);
                             for (Event<?> event : wrappedRunnable.events) {
-                                synchronized (event.actions){
-                                    if(event.actions.isEmpty())
-                                        removableEvents.add(event);
-                                }
+                                if (event.actions.isEmpty())
+                                    removableEvents.add(event);
+
                             }
                             for (Event<?> removableEvent : removableEvents) {
                                 wrappedRunnable.events.remove(removableEvent);
@@ -63,16 +51,29 @@ public class Event<T> {
             throw new RuntimeException(e);
         }
     });
-    static{
+
+    static {
         mainCleanerThread.setName("Easy-Java-Events-Cleaner");
         mainCleanerThread.start();
     }
 
     /**
+     * List of actions that get executed when this event happens. <br>
+     * See also: <br>
+     * {@link #execute(Object)} <br>
+     * {@link #addAction(BetterBiConsumer, Consumer)} <br>
+     */
+    public final CopyOnWriteArrayList<Action<T>> actions = new CopyOnWriteArrayList<>();
+    public final CopyOnWriteArrayList<Action<T>> actionsToRemove = new CopyOnWriteArrayList<>();
+    public Predicate<Object> defaultActionRemoveCondition;
+    public Consumer<Exception> onConditionException;
+    public int secondsBetweenChecks = 0;
+    public Runnable cleanerRunnable;
+
+    /**
      * Creates a new event with an empty {@link #actions} list.
      */
     public Event() {
-        this.actions = new ArrayList<>();
     }
 
     /**
@@ -81,7 +82,7 @@ public class Event<T> {
      * @param actions See {@link #actions}.
      */
     public Event(List<Action<T>> actions) {
-        this.actions = actions;
+        this.actions.addAll(actions);
     }
 
 
@@ -94,19 +95,17 @@ public class Event<T> {
      * @return this event for chaining.
      */
     public Event<T> execute(T t) {
-        synchronized (actions) {
-            for (Action<T> action : actions) {
-                try {
-                    if (!markActionAsRemovableIfNeeded(action)) {
-                        action.onEvent.accept(action, t);
-                        action.executionCount++;
-                    }
-                } catch (Exception e) {
-                    action.onException.accept(e);
+        for (Action<T> action : actions) {
+            try {
+                if (!markActionAsRemovableIfNeeded(action)) {
+                    action.onEvent.accept(action, t);
+                    action.executionCount++;
                 }
+            } catch (Exception e) {
+                action.onException.accept(e);
             }
-            removeActionsToRemove();
         }
+        removeActionsToRemove();
         return this;
     }
 
@@ -195,48 +194,50 @@ public class Event<T> {
      * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
      */
     public Action<T> addAction(BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
-        synchronized (actions) {
-            Action<T> action = new Action(this, onEvent, onException, isOneTime, object);
-            actions.add(action);
-            if(cleanerRunnable != null)
-                synchronized (map){
-                    WrappedRunnable wrappedRunnable = map.get(secondsBetweenChecks);
-                    if(wrappedRunnable == null){
-                        wrappedRunnable = new WrappedRunnable(secondsBetweenChecks);
-                        map.put(secondsBetweenChecks, wrappedRunnable);
-                    }
-                    wrappedRunnable.events.add(this);
+        return addAction(new Action(this, onEvent, onException, isOneTime, object));
+    }
+
+    /**
+     * See {@link #addAction(BetterBiConsumer, Consumer)} for details. <br>
+     */
+    public Action<T> addAction(Action<T> action) {
+        actions.add(action);
+        if (cleanerRunnable != null)
+            synchronized (map) {
+                WrappedRunnable wrappedRunnable = map.get(secondsBetweenChecks);
+                if (wrappedRunnable == null) {
+                    wrappedRunnable = new WrappedRunnable(secondsBetweenChecks);
+                    map.put(secondsBetweenChecks, wrappedRunnable);
                 }
-            return action;
-        }
+                wrappedRunnable.events.add(this);
+            }
+        return action;
     }
 
     /**
      * Returns true if this action can be removed and adds it to the {@link #actionsToRemove} list. <br>
      */
     public boolean markActionAsRemovableIfNeeded(Action<T> action) {
-        synchronized (actionsToRemove) {
-            boolean removable = false;
-            try {
-                if (action.removeCondition != null) { // this has priority
-                    if (action.removeCondition.test(action.object)) {
-                        removable = true;
-                        actionsToRemove.add(action);
-                    }
-                } else if (defaultActionRemoveCondition != null) {
-                    if (defaultActionRemoveCondition.test(action.object)) {
-                        removable = true;
-                        actionsToRemove.add(action);
-                    }
+        boolean removable = false;
+        try {
+            if (action.removeCondition != null) { // this has priority
+                if (action.removeCondition.test(action.object)) {
+                    removable = true;
+                    actionsToRemove.add(action);
                 }
-            } catch (Exception e) {
-                if (onConditionException == null) throw new RuntimeException(e);
-                else onConditionException.accept(e);
-                removable = true;
-                actionsToRemove.add(action);
+            } else if (defaultActionRemoveCondition != null) {
+                if (defaultActionRemoveCondition.test(action.object)) {
+                    removable = true;
+                    actionsToRemove.add(action);
+                }
             }
-            return removable;
+        } catch (Exception e) {
+            if (onConditionException == null) throw new RuntimeException(e);
+            else onConditionException.accept(e);
+            removable = true;
+            actionsToRemove.add(action);
         }
+        return removable;
     }
 
     /**
@@ -247,40 +248,22 @@ public class Event<T> {
      * @return this event for chaining.
      */
     public Event<T> markActionAsRemovable(Action<T> action) {
-        synchronized (actionsToRemove) {
-            actionsToRemove.add(action); // To make sure it gets removed by the cleaner thread
-            action.removeCondition = obj -> true; // To make sure it gets removed before being executed the next time
-        }
+
+        actionsToRemove.add(action); // To make sure it gets removed by the cleaner thread
+        action.removeCondition = obj -> true; // To make sure it gets removed before being executed the next time
+
         return this;
     }
 
     public void removeActionsToRemove() {
-        synchronized (actionsToRemove) {
-            if (!actionsToRemove.isEmpty()) {
-                for (Action<T> action : actionsToRemove) {
-                    actions.remove(action);
-                }
-                actionsToRemove.clear();
+
+        if (!actionsToRemove.isEmpty()) {
+            for (Action<T> action : actionsToRemove) {
+                actions.remove(action);
             }
+            actionsToRemove.clear();
         }
-    }
 
-    /**
-     * Returns a copy of {@link #actions}.
-     */
-    public List<Action<T>> getActionsCopy() {
-        synchronized (actions) {
-            return new ArrayList<>(actions);
-        }
-    }
-
-    /**
-     * Returns a copy of {@link #actionsToRemove}.
-     */
-    public List<Action<T>> getActionsToRemoveCopy() {
-        synchronized (actionsToRemove) {
-            return new ArrayList<>(actionsToRemove);
-        }
     }
 
     /**
@@ -298,7 +281,7 @@ public class Event<T> {
     /**
      * Similar to {@link #initSimpleCleaner(int)} but checks the {@link #actions} via {@link #markActionAsRemovableIfNeeded(Action)}.
      *
-     * @param secondsBetweenChecks              the amount of seconds between each check.
+     * @param secondsBetweenChecks         the amount of seconds between each check.
      * @param defaultActionRemoveCondition when true, removes that action from the list.
      * @param onConditionException         gets executed when something went wrong during condition checking.
      * @return this event for chaining.
@@ -307,24 +290,22 @@ public class Event<T> {
         this.secondsBetweenChecks = secondsBetweenChecks;
         this.defaultActionRemoveCondition = defaultActionRemoveCondition;
         this.onConditionException = onConditionException;
-        synchronized (map){
+        synchronized (map) {
             WrappedRunnable wrappedRunnable = map.get(secondsBetweenChecks);
-            if(wrappedRunnable == null){
+            if (wrappedRunnable == null) {
                 wrappedRunnable = new WrappedRunnable(secondsBetweenChecks);
                 map.put(secondsBetweenChecks, wrappedRunnable);
             }
             this.cleanerRunnable = () -> {
                 try {
-                    synchronized (actions) {
-                        for (Action<T> action : actions) {
-                            try {
-                                markActionAsRemovableIfNeeded(action);
-                            } catch (Exception e) {
-                                onConditionException.accept(e);
-                            }
+                    for (Action<T> action : actions) {
+                        try {
+                            markActionAsRemovableIfNeeded(action);
+                        } catch (Exception e) {
+                            onConditionException.accept(e);
                         }
-                        removeActionsToRemove();
                     }
+                    removeActionsToRemove();
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -354,9 +335,9 @@ public class Event<T> {
      */
     public Event<T> initSimpleCleaner(int secondsBetweenChecks) {
         this.secondsBetweenChecks = secondsBetweenChecks;
-        synchronized (map){
+        synchronized (map) {
             WrappedRunnable wrappedRunnable = map.get(secondsBetweenChecks);
-            if(wrappedRunnable == null){
+            if (wrappedRunnable == null) {
                 wrappedRunnable = new WrappedRunnable(secondsBetweenChecks);
                 map.put(secondsBetweenChecks, wrappedRunnable);
             }

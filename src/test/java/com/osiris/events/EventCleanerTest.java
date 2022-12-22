@@ -16,14 +16,14 @@ public class EventCleanerTest {
                 // Do nothing
             });
         }
-        List<Action<Void>> actions = event.getActionsCopy();
+        List<Action<Void>> actions = event.actions;
         assertEquals(10000, actions.size());
         for (int i = 0; i < 5000; i++) {
             actions.get(i).object = true;
         }
 
         Thread.sleep(5000);
-        assertEquals(5000, event.getActionsCopy().size());
+        assertEquals(5000, event.actions.size());
     }
 
     @Test
@@ -35,14 +35,14 @@ public class EventCleanerTest {
                 // Do nothing
             });
         }
-        List<Action<Void>> actions = event.getActionsCopy();
+        List<Action<Void>> actions = event.actions;
         assertEquals(10000, actions.size());
         for (int i = 0; i < 5000; i++) {
             actions.get(i).remove();
         }
 
         Thread.sleep(1000);
-        assertEquals(5000, event.getActionsCopy().size());
+        assertEquals(5000, event.actions.size());
     }
 
     @Test
@@ -59,6 +59,6 @@ public class EventCleanerTest {
         event.execute(null);
 
         Thread.sleep(1000);
-        assertEquals(0, event.getActionsCopy().size());
+        assertEquals(0, event.actions.size());
     }
 }

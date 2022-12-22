@@ -43,7 +43,7 @@ class EventTest {
 
         // Actual tests:
         Thread.sleep(3000);
-        assertEquals(1, onValueChanged.getActionsCopy().size());
+        assertEquals(1, onValueChanged.actions.size());
         onValueChanged.markActionAsRemovable(myAction);
         Thread.sleep(3000);
         onValueChanged.addAction((a, value) -> {

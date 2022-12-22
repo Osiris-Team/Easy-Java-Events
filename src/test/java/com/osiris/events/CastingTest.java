@@ -14,6 +14,6 @@ class CastingTest {
         onValueChanged.initCleaner(100, object -> (Boolean) object, Exception::printStackTrace);
         actionToRemove.object = Boolean.TRUE;
         onValueChanged.execute(1);
-        assertEquals(0, onValueChanged.getActionsCopy().size());
+        assertEquals(0, onValueChanged.actions.size());
     }
 }
