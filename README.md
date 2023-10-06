@@ -53,13 +53,3 @@ class EventTest {
         actionToRemove.object = new Object(); // Note that you can store any type of object here.
     }
 }
-```
-
-Events are also fully serializable:
-```java
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ObjectOutputStream parser = new ObjectOutputStream(out);
-        parser.writeObject(new Event<>());
-        Event<?> e = (Event<?>) new ObjectInputStream(new ByteArrayInputStream(out.toByteArray())).readObject();
-        assertNotNull(e);
-```

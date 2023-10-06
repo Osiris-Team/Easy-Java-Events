@@ -8,10 +8,10 @@
 
 package com.osiris.events;
 
-import java.io.Serializable;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-public class Action<T> implements Serializable {
+public class Action<T> {
     /**
      * If you want to disable this, changing this to false will
      * have no affect. Instead, set {@link #removeCondition} to null.
@@ -22,12 +22,12 @@ public class Action<T> implements Serializable {
      * Holds code. Gets executed on an event.
      * Has itself as first parameter and the value T as second one.
      */
-    public SBiConsumer<Action<T>, T> onEvent;
+    public BetterBiConsumer<Action<T>, T> onEvent;
     /**
      * Holds code. Gets executed when an exception was thrown in the code held by {@link #onEvent}. <br>
      * Can be null. <br>
      */
-    public SConsumer<Exception> onException;
+    public Consumer<Exception> onException;
     public long executionCount = 0;
     /**
      * Can be null. <br>
@@ -52,7 +52,7 @@ public class Action<T> implements Serializable {
      * @param isOneTime   See {@link Action#isOneTime}.
      * @param object      See {@link Action#object}.
      */
-    public Action(Event<T> event, SBiConsumer<Action<T>, T> onEvent, SConsumer<Exception> onException, boolean isOneTime, Object object) {
+    public Action(Event<T> event, BetterBiConsumer<Action<T>, T> onEvent, Consumer<Exception> onException, boolean isOneTime, Object object) {
         this.event = event;
         this.onEvent = onEvent;
         this.onException = onException;

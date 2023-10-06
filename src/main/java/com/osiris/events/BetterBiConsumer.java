@@ -8,7 +8,6 @@
 
 package com.osiris.events;
 
-import java.io.Serializable;
 import java.util.Objects;
 
 /**
@@ -17,21 +16,21 @@ import java.util.Objects;
  * @see java.util.function.Consumer
  */
 @FunctionalInterface
-public interface SConsumer<T> extends Serializable {
+public interface BetterBiConsumer<A, T> {
 
     /**
      * @see java.util.function.Consumer
      */
-    void accept(T t) throws Exception;
+    void accept(A a, T t) throws Exception;
 
     /**
      * @see java.util.function.Consumer
      */
-    default SConsumer<T> andThen(SConsumer<T> after) throws Exception {
+    default BetterBiConsumer<A, T> andThen(BetterBiConsumer<A, T> after) throws Exception {
         Objects.requireNonNull(after);
-        return (T t) -> {
-            accept(t);
-            after.accept(t);
+        return (A a, T t) -> {
+            accept(a, t);
+            after.accept(a, t);
         };
     }
 }
