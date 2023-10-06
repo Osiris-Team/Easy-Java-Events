@@ -1,10 +1,11 @@
 package com.osiris.events;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class SuperLoop {
+public class SuperLoop implements Serializable {
     public final int sleepIntervallMillis;
     public final Thread thread;
     public final List<LoopCode> list = new ArrayList<>();
