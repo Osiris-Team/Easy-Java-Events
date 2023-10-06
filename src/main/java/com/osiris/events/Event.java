@@ -100,6 +100,7 @@ public class Event<T> {
                 if (!markActionAsRemovableIfNeeded(action)) {
                     action.onEvent.accept(action, t);
                     action.executionCount++;
+                    if(action.isSkipNextActions) break;
                 }
             } catch (Exception e) {
                 action.onException.accept(e);

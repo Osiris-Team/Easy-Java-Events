@@ -17,6 +17,10 @@ public class Action<T> {
      * have no affect. Instead, set {@link #removeCondition} to null.
      */
     public final boolean isOneTime;
+    /**
+     * Skips all actions that come after this one and prevents their execution.
+     */
+    public boolean isSkipNextActions = false;
     public Event<T> event;
     /**
      * Holds code. Gets executed on an event.
@@ -44,6 +48,7 @@ public class Action<T> {
     public Object object;
 
 
+
     /**
      * Creates an action.
      *
@@ -65,11 +70,23 @@ public class Action<T> {
      * Marks this action to be removed from the event It's attached to. <br>
      * Note that this will not happen directly, see {@link Event#markActionAsRemovable(Action)} for details.
      */
-    public void remove() {
+    public Action<T> remove() {
         event.markActionAsRemovable(this);
+        return this;
     }
 
-    public void oneTime() {
+    public Action<T> oneTime() {
         removeCondition = obj -> executionCount >= 1;
+        return this;
+    }
+
+    public Action<T> skipNextActions(){
+        isSkipNextActions = true;
+        return this;
+    }
+
+    public Action<T> skipNextActions(boolean b){
+        isSkipNextActions = b;
+        return this;
     }
 }
